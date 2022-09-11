@@ -8,7 +8,7 @@ public static class Config
         new IdentityResource[] {new IdentityResources.OpenId(), new IdentityResources.Profile(),};
 
     public static IEnumerable<ApiScope> ApiScopes =>
-        new ApiScope[] {new("api", "API", new[] {"profile", "name", "email", "role", "DateOfBirth"})};
+        new ApiScope[] {new("api", "API", new[] {"profile", "name", "email", "role"})};
 
     public static IEnumerable<ApiResource> GetApiResource()
     {
@@ -27,8 +27,11 @@ public static class Config
                 AllowedGrantTypes = GrantTypes.Code,
                 RequirePkce = true,
                 RequireClientSecret = false,
-                RedirectUris = {"https://localhost:5001/swagger/oauth2-redirect.html"},
-                AllowedCorsOrigins = {"https://localhost:5001"},
+                RedirectUris =
+                {
+                    "https://localhost:7249/swagger/oauth2-redirect.html"
+                },
+                AllowedCorsOrigins = {"https://localhost:7249"},
                 AllowedScopes = {"openid", "profile", "api", "email"},
             },
         };

@@ -1,0 +1,23 @@
+version: "3.9"
+
+networks:
+  dotnet-otel-demo:
+  
+services:
+  sqlserver:
+    image: "mcr.microsoft.com/azure-sql-edge"
+    ports:
+      - "1433:1433"
+    environment:
+        SA_PASSWORD: "2@LaiNw)PDvs^t>L!Ybt]6H^%h3U>M"
+        ACCEPT_EULA: "Y"
+    networks:
+      - dotnet-otel-demo
+  identity-server:
+    build:
+      context: ./src/IdentityServer
+      dockerfile: Dockerfile
+    ports:
+     - "5001:80"
+    networks:
+      - dotnet-otel-demo

@@ -3,6 +3,7 @@
   <PropertyGroup>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <NoWarn>$(NoWarn);1591</NoWarn>
   </PropertyGroup>

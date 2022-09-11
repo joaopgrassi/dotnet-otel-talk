@@ -28,8 +28,12 @@ internal static class HostingExtensions
         // in-memory, code config
         isBuilder.AddInMemoryIdentityResources(Config.IdentityResources);
         isBuilder.AddInMemoryApiScopes(Config.ApiScopes);
+        isBuilder.AddInMemoryApiResources(Config.GetApiResource());
         isBuilder.AddInMemoryClients(Config.Clients);
 
+        // not recommended for production - you need to store your key material somewhere secure
+        isBuilder.AddDeveloperSigningCredential();
+        
         builder.Services.AddAuthentication();
 
         // Configure OpenTelemetry Tracing
