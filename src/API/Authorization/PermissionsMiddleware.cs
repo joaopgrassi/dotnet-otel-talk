@@ -6,14 +6,10 @@ namespace API.Authorization;
 public class PermissionsMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly ILogger<PermissionsMiddleware> _logger;
 
-    public PermissionsMiddleware(
-        RequestDelegate next,
-        ILogger<PermissionsMiddleware> logger)
+    public PermissionsMiddleware(RequestDelegate next)
     {
         _next = next;
-        _logger = logger;
     }
 
     public async Task InvokeAsync(
@@ -26,7 +22,7 @@ public class PermissionsMiddleware
         }
 
         using var span = OTel.Tracer.StartActivity("PermissionMiddleware_Invoke");
-        
+
         var cancellationToken = context.RequestAborted;
 
         var userSub = context.User.FindFirst(StandardJwtClaimTypes.Subject)?.Value;
@@ -35,7 +31,8 @@ public class PermissionsMiddleware
             span?.SetStatus(ActivityStatusCode.Error);
             span?.AddEvent(new ActivityEvent("The'sub' claim is missing in the user identity"));
 
-            await context.WriteAccessDeniedResponse("User 'sub' claim is required", cancellationToken: cancellationToken);
+            await context.WriteAccessDeniedResponse("User 'sub' claim is required",
+                cancellationToken: cancellationToken);
             return;
         }
 

@@ -2,9 +2,7 @@
 
 namespace API;
 
-public class OTel
+public static class OTel
 {
-    public const string TracerName = "API";
-    
-    public static ActivitySource Tracer = new ActivitySource(TracerName, "0.0.1");
+    public static readonly ActivitySource Tracer = new ActivitySource("API", "0.0.1");
 }

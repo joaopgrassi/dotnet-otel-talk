@@ -2,6 +2,8 @@ using API.Authorization;
 using API.EF;
 using API.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -10,6 +12,7 @@ namespace API;
 internal static class HostingExtensions
 {
     private static AppSettings _appSettings = null!;
+    private static ResourceBuilder _otelResource = ResourceBuilder.CreateDefault().AddService("api");
     
     public static WebApplication ConfigureServices(this WebApplicationBuilder builder)
     {
@@ -26,28 +29,7 @@ internal static class HostingExtensions
         builder.Services.AddSwagger(_appSettings);
         builder.Services.AddAuthentication(_appSettings);
         
-        // Configure OpenTelemetry Tracing
-        // Exporting to a OTel collector on the default port (gRPC localhost:4317)
-        builder.Services.AddOpenTelemetryTracing(tracerProviderBuilder =>
-        {
-            tracerProviderBuilder
-                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("api"))
-                // Collect spans from both the API and AuthUtils project
-                .AddSource(AuthUtils.OTel.TracerName)
-                .AddSource(OTel.TracerName)
-                .AddHttpClientInstrumentation()
-                .AddAspNetCoreInstrumentation(opts =>
-                {
-                    opts.RecordException = true;
-                    // Don't collect spans for requests on swagger things (e.g. /swagger/index.html)
-                    opts.Filter = req => !req.Request.Path.ToUriComponent().StartsWith("/swagger");
-                })
-                .AddEntityFrameworkCoreInstrumentation(opts =>
-                {
-                    opts.SetDbStatementForText = true;
-                })
-                .AddOtlpExporter();
-        });
+        builder.Services.ConfigureOpenTelemetry();
 
         return builder.Build();
     }
@@ -77,5 +59,49 @@ internal static class HostingExtensions
         app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
 
         return app;
+    }
+
+    private static void ConfigureOpenTelemetry(this IServiceCollection services)
+    {
+        // Configure OpenTelemetry Tracing and Metrics
+        // Exporting to a OTel collector on the default port (gRPC localhost:4317)
+        services.AddOpenTelemetryTracing(builder =>
+        {
+            builder
+                .SetResourceBuilder(_otelResource)
+                
+                // Collect spans from both the API and AuthUtils project
+                .AddSource(AuthUtils.OTel.Tracer.Name)
+                .AddSource(OTel.Tracer.Name)
+                
+                .AddHttpClientInstrumentation()
+                .AddAspNetCoreInstrumentation(opts =>
+                {
+                    opts.RecordException = true;
+                    // Don't collect spans for requests on swagger things (e.g. /swagger/index.html)
+                    opts.Filter = req => !req.Request.Path.ToUriComponent().StartsWith("/swagger");
+                })
+                .AddEntityFrameworkCoreInstrumentation(opts =>
+                {
+                    opts.SetDbStatementForText = true;
+                })
+                .AddOtlpExporter();
+        });
+
+        services.AddOpenTelemetryMetrics(builder =>
+        {
+            builder
+                .SetResourceBuilder(_otelResource)
+                // Collect metrics from the AuthUtils project
+                .AddMeter(AuthUtils.OTel.Meter.Name)
+                // Collect metrics from ASP.NET and HTTP Client calls
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddOtlpExporter((OtlpExporterOptions exporterOptions, MetricReaderOptions readerOptions) =>
+                {
+                    readerOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 5000;
+                    readerOptions.TemporalityPreference = MetricReaderTemporalityPreference.Delta;
+                });
+        });
     }
 }

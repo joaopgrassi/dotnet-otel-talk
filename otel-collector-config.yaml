@@ -16,3 +16,6 @@ service:
     traces:
       receivers: [otlp]
       exporters: [logging,jaeger]
+    metrics:
+      receivers: [otlp]
+      exporters: [logging]
