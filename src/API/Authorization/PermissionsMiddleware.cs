@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AuthUtils;
 
 namespace API.Authorization;
@@ -24,19 +25,26 @@ public class PermissionsMiddleware
             return;
         }
 
+        using var span = OTel.Tracer.StartActivity("PermissionMiddleware_Invoke");
+        
         var cancellationToken = context.RequestAborted;
 
         var userSub = context.User.FindFirst(StandardJwtClaimTypes.Subject)?.Value;
         if (string.IsNullOrEmpty(userSub))
         {
+            span?.SetStatus(ActivityStatusCode.Error);
+            span?.AddEvent(new ActivityEvent("The'sub' claim is missing in the user identity"));
+
             await context.WriteAccessDeniedResponse("User 'sub' claim is required", cancellationToken: cancellationToken);
             return;
         }
 
+        span?.SetTag("sub", userSub);
         var permissionsIdentity = await permissionService.GetUserPermissionsIdentity(userSub, cancellationToken);
         if (permissionsIdentity == null)
         {
-            _logger.LogWarning("User {sub} does not have permissions", userSub);
+            span?.SetStatus(ActivityStatusCode.Error);
+            span?.AddEvent(new ActivityEvent("No permissions found for the user on the database"));
 
             await context.WriteAccessDeniedResponse(cancellationToken: cancellationToken);
             return;

@@ -13,13 +13,16 @@ public class PermissionAuthorizationPolicyProvider : DefaultAuthorizationPolicyP
     /// <inheritdoc />
     public override async Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
     {
+        using var span = OTel.Tracer.StartActivity("GetPolicyAsync");
+        span?.SetTag("policyName", policyName);
+        
         if (!policyName.StartsWith(PolicyPrefix, StringComparison.OrdinalIgnoreCase))
         {
             // it's not one of our dynamic policies, so we fallback to the base behavior
             // this will load policies added in Startup.cs (AddPolicy..)
             return await base.GetPolicyAsync(policyName);
         }
-
+        
         PermissionOperator @operator = GetOperatorFromPolicy(policyName);
         string[] permissions = GetPermissionsFromPolicy(policyName);
 

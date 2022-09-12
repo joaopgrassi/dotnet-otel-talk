@@ -32,6 +32,9 @@ internal static class HostingExtensions
         {
             tracerProviderBuilder
                 .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("api"))
+                // Collect spans from both the API and AuthUtils project
+                .AddSource(AuthUtils.OTel.TracerName)
+                .AddSource(OTel.TracerName)
                 .AddHttpClientInstrumentation()
                 .AddAspNetCoreInstrumentation(opts =>
                 {
