@@ -42,13 +42,15 @@ internal static class HostingExtensions
         {
             tracerProviderBuilder
                 .AddSource(IdentityServerConstants.Tracing.Basic)
+                .AddSource(IdentityServerConstants.Tracing.Cache)
                 .AddSource(IdentityServerConstants.Tracing.Services)
+                .AddSource(IdentityServerConstants.Tracing.Stores)
                 .AddSource(IdentityServerConstants.Tracing.Validation)
                 .SetResourceBuilder(ResourceBuilder.CreateDefault()
-                        .AddService("DuendeIdentityServer"))
+                        .AddService("identity-server"))
                 .AddHttpClientInstrumentation()
                 .AddAspNetCoreInstrumentation()
-                .AddOtlpExporter();
+                .AddOtlpExporter(opts => opts.Endpoint = new Uri("http://otel-collector:4317"));
         });
 
         return builder.Build();

@@ -2,6 +2,8 @@ using API.Authorization;
 using API.EF;
 using API.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace API;
 
@@ -23,6 +25,26 @@ internal static class HostingExtensions
 
         builder.Services.AddSwagger(_appSettings);
         builder.Services.AddAuthentication(_appSettings);
+        
+        // Configure OpenTelemetry Tracing
+        // Exporting to a OTel collector on the default port (gRPC localhost:4317)
+        builder.Services.AddOpenTelemetryTracing(tracerProviderBuilder =>
+        {
+            tracerProviderBuilder
+                .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("api"))
+                .AddHttpClientInstrumentation()
+                .AddAspNetCoreInstrumentation(opts =>
+                {
+                    opts.RecordException = true;
+                    // Don't collect spans for requests on swagger things (e.g. /swagger/index.html)
+                    opts.Filter = req => !req.Request.Path.ToUriComponent().StartsWith("/swagger");
+                })
+                .AddEntityFrameworkCoreInstrumentation(opts =>
+                {
+                    opts.SetDbStatementForText = true;
+                })
+                .AddOtlpExporter();
+        });
 
         return builder.Build();
     }

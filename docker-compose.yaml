@@ -21,3 +21,25 @@ services:
      - "5001:80"
     networks:
       - dotnet-otel-demo
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.59.0
+    command: ["--config=/etc/otel-collector-config.yaml", "${OTELCOL_ARGS}"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "13133:13133" # health_check extension
+      - "9411"   # Zipkin receiver
+      - "55679:55679" # zpages extension
+      - "4317:4317"   # OTLP gRPC receiver
+    depends_on:
+      - jaeger
+    networks:
+      - dotnet-otel-demo
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "14250"
+    networks:
+      - dotnet-otel-demo
