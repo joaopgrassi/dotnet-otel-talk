@@ -1,4 +1,4 @@
-using API.Authorization;
+﻿using API.Authorization;
 using API.EF;
 using API.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -6,14 +6,15 @@ using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using OpenTelemetry.Logs;
 
 namespace API;
 
 internal static class HostingExtensions
 {
     private static AppSettings _appSettings = null!;
-    private static ResourceBuilder _otelResource = ResourceBuilder.CreateDefault().AddService("api");
-    
+    private static readonly ResourceBuilder _otelResource = ResourceBuilder.CreateDefault().AddService("api");
+
     public static WebApplication ConfigureServices(this WebApplicationBuilder builder)
     {
         _appSettings = builder.Configuration.ConfigureAndGet<AppSettings>(builder.Services, AppSettings.SectionName);
@@ -21,15 +22,13 @@ internal static class HostingExtensions
         builder.Services.AddControllers();
         builder.Services.AddDbContext<AuthzContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("AuthzConnection")));
-            
+
         builder.Services.AddHostedService<DbMigratorHostedService>();
-
         builder.Services.AddScoped<IUserPermissionService, UserPermissionService>();
-
         builder.Services.AddSwagger(_appSettings);
         builder.Services.AddAuthentication(_appSettings);
-        
-        builder.Services.ConfigureOpenTelemetry();
+
+        builder.AddOpenTelemetry();
 
         return builder.Build();
     }
@@ -51,7 +50,7 @@ internal static class HostingExtensions
         app.UseHttpsRedirection();
         app.UseRouting();
         app.UseAuthentication();
-            
+
         // order here matters - after UseAuthentication so we have the Identity populated in the HttpContext
         app.UseMiddleware<PermissionsMiddleware>();
         app.UseAuthorization();
@@ -61,19 +60,22 @@ internal static class HostingExtensions
         return app;
     }
 
-    private static void ConfigureOpenTelemetry(this IServiceCollection services)
+    /// <summary>
+    /// Adds OpenTelemetry Traces, Metrics and Logs.
+    /// Exporting to a OTel collector on the default port (gRPC localhost:4317)
+    /// </summary>
+    /// <param name="builder"></param>
+    private static void AddOpenTelemetry(this WebApplicationBuilder builder)
     {
-        // Configure OpenTelemetry Tracing and Metrics
-        // Exporting to a OTel collector on the default port (gRPC localhost:4317)
-        services.AddOpenTelemetryTracing(builder =>
+        // Traces
+        builder.Services.AddOpenTelemetryTracing(options =>
         {
-            builder
+            options
                 .SetResourceBuilder(_otelResource)
-                
+
                 // Collect spans from both the API and AuthUtils project
                 .AddSource(AuthUtils.OTel.Tracer.Name)
                 .AddSource(OTel.Tracer.Name)
-                
                 .AddHttpClientInstrumentation()
                 .AddAspNetCoreInstrumentation(opts =>
                 {
@@ -88,12 +90,13 @@ internal static class HostingExtensions
                 .AddOtlpExporter();
         });
 
-        services.AddOpenTelemetryMetrics(builder =>
+        // Metrics
+        builder.Services.AddOpenTelemetryMetrics(options =>
         {
-            builder
+            options
                 .SetResourceBuilder(_otelResource)
                 // Collect metrics from the AuthUtils project
-                .AddMeter(AuthUtils.OTel.Meter.Name)
+                .AddMeter("AuthUtils")
                 // Collect metrics from ASP.NET and HTTP Client calls
                 .AddAspNetCoreInstrumentation()
                 .AddHttpClientInstrumentation()
@@ -102,6 +105,23 @@ internal static class HostingExtensions
                     readerOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 5000;
                     readerOptions.TemporalityPreference = MetricReaderTemporalityPreference.Delta;
                 });
+        });
+
+        // Logs
+        builder.Logging.ClearProviders();
+
+        builder.Logging.AddOpenTelemetry(options =>
+        {
+            options.SetResourceBuilder(_otelResource)
+                .AddOtlpExporter() // export to the OTel collector
+                .AddConsoleExporter(); // export to the console;
+        });
+
+        builder.Services.Configure<OpenTelemetryLoggerOptions>(options =>
+        {
+            options.IncludeScopes = true;
+            options.ParseStateValues = true;
+            options.IncludeFormattedMessage = true;
         });
     }
 }

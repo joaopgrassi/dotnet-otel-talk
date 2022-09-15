@@ -13,6 +13,7 @@ services:
         ACCEPT_EULA: "Y"
     networks:
       - dotnet-otel-demo
+
   identity-server:
     build:
       context: ./src/IdentityServer
@@ -21,6 +22,7 @@ services:
      - "5001:80"
     networks:
       - dotnet-otel-demo
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.59.0
     command: ["--config=/etc/otel-collector-config.yaml", "${OTELCOL_ARGS}"]

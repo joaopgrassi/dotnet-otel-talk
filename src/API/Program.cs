@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using API;
 
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();

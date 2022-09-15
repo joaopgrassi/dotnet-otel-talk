@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using AuthUtils;
 
 namespace API.Authorization;
@@ -6,10 +6,12 @@ namespace API.Authorization;
 public class PermissionsMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<PermissionsMiddleware> _logger;
 
-    public PermissionsMiddleware(RequestDelegate next)
+    public PermissionsMiddleware(RequestDelegate next, ILogger<PermissionsMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     public async Task InvokeAsync(
@@ -29,7 +31,8 @@ public class PermissionsMiddleware
         if (string.IsNullOrEmpty(userSub))
         {
             span?.SetStatus(ActivityStatusCode.Error);
-            span?.AddEvent(new ActivityEvent("The'sub' claim is missing in the user identity"));
+
+            _logger.LogInformation("The'sub' claim is missing in the user identity");
 
             await context.WriteAccessDeniedResponse("User 'sub' claim is required",
                 cancellationToken: cancellationToken);
@@ -41,7 +44,7 @@ public class PermissionsMiddleware
         if (permissionsIdentity == null)
         {
             span?.SetStatus(ActivityStatusCode.Error);
-            span?.AddEvent(new ActivityEvent("No permissions found for the user on the database"));
+            _logger.LogWarning("No permissions found for the user on the database");
 
             await context.WriteAccessDeniedResponse(cancellationToken: cancellationToken);
             return;
@@ -49,6 +52,7 @@ public class PermissionsMiddleware
 
         // User has permissions, so we add the extra identity containing the "permissions" claims
         context.User.AddIdentity(permissionsIdentity);
+        _logger.LogInformation("User {sub} has permissions", userSub);
         await _next(context);
     }
 }
