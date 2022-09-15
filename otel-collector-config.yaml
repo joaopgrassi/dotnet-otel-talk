@@ -10,12 +10,17 @@ exporters:
       insecure: true
   logging:
     loglevel: debug
+  otlphttp:
+    endpoint: "https://<o11y-back-end>/api/v2/otlp"
+    headers:
+      Authorization: "<some-api-token>"
+    
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      exporters: [logging,jaeger]
+      exporters: [logging,jaeger,otlphttp]
     metrics:
       receivers: [otlp]
       exporters: [logging]
