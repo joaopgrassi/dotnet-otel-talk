@@ -1,4 +1,4 @@
-using Duende.IdentityServer;
+﻿using Duende.IdentityServer;
 using IdentityServer;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpenTelemetry.Resources;
@@ -58,6 +58,8 @@ internal static class HostingExtensions
 
     public static WebApplication ConfigurePipeline(this WebApplication app)
     {
+        app.UseCookiePolicy(new CookiePolicyOptions { MinimumSameSitePolicy = SameSiteMode.Strict });
+
         app.UseSerilogRequestLogging();
 
         if (app.Environment.IsDevelopment())
