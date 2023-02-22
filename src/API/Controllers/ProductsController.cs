@@ -1,3 +1,4 @@
+﻿using System.Diagnostics;
 using AuthUtils;
 using AuthUtils.PolicyProvider;
 using Microsoft.AspNetCore.Authorization;
@@ -10,6 +11,13 @@ namespace API.Controllers;
 [Route("products")]
 public class ProductsController : ControllerBase
 {
+    private readonly ILogger<ProductsController> _logger;
+
+    public ProductsController(ILogger<ProductsController> logger)
+    {
+        _logger = logger;
+    }
+
     /// <summary>
     /// Both Alice and Bob can see access this. Only 'Read' is required
     /// </summary>
@@ -17,6 +25,8 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public IActionResult Get()
     {
+        _logger.LogInformation("Some logger from controller {my_log_attr}", "log_value");
+
         return Ok("We've got products!");
     }
         

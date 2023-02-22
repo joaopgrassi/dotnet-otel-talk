@@ -7,13 +7,16 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Logs;
+using System.Diagnostics;
 
 namespace API;
 
 internal static class HostingExtensions
 {
     private static AppSettings _appSettings = null!;
-    private static readonly ResourceBuilder _otelResource = ResourceBuilder.CreateDefault().AddService("api");
+    private static readonly ResourceBuilder _otelResource = ResourceBuilder.CreateDefault()
+        .AddService("api")
+        .AddAttributes(new TagList { {"my_log_attr", "res_value" } });
 
     public static WebApplication ConfigureServices(this WebApplicationBuilder builder)
     {

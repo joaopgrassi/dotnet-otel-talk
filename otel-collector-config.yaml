@@ -21,14 +21,14 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      exporters: [logging,jaeger]
+      exporters: [jaeger, otlphttp]
       # uncomment to send traces also via HTTP to your back-end
       # exporters: [logging,jaeger,otlphttp]
     metrics:
       receivers: [otlp]
-      exporters: [logging]
+      exporters: [otlphttp]
       # uncomment to send metrics also via HTTP to your back-end
       # exporters: [logging, otlphttp]
     logs:
       receivers: [otlp]
-      exporters: [logging]
+      exporters: [logging, otlphttp]
