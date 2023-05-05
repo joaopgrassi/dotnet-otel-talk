@@ -27,6 +27,7 @@ public static class Config
                 AllowedGrantTypes = GrantTypes.Code,
                 RequirePkce = true,
                 RequireClientSecret = false,
+                AccessTokenLifetime = 14400,
                 RedirectUris =
                 {
                     "https://localhost:7249/swagger/oauth2-redirect.html"

@@ -16,7 +16,8 @@ internal static class HostingExtensions
     private static AppSettings _appSettings = null!;
     private static readonly ResourceBuilder _otelResource = ResourceBuilder.CreateDefault()
         .AddService("api")
-        .AddAttributes(new TagList { {"my_log_attr", "res_value" } });
+        .AddTelemetrySdk()
+        .AddAttributes(new TagList { { "my_log_attr", "res_value" } });
 
     public static WebApplication ConfigureServices(this WebApplicationBuilder builder)
     {
@@ -58,7 +59,7 @@ internal static class HostingExtensions
         app.UseMiddleware<PermissionsMiddleware>();
         app.UseAuthorization();
 
-        app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+        app.MapControllers();
 
         return app;
     }
@@ -70,10 +71,12 @@ internal static class HostingExtensions
     /// <param name="builder"></param>
     private static void AddOpenTelemetry(this WebApplicationBuilder builder)
     {
-        // Traces
-        builder.Services.AddOpenTelemetryTracing(options =>
-        {
-            options
+        builder.Logging.ClearProviders();
+
+        builder.Services.AddOpenTelemetry()
+            .WithTracing(options =>
+            {
+                options
                 .SetResourceBuilder(_otelResource)
 
                 // Collect spans from both the API and AuthUtils project
@@ -91,27 +94,22 @@ internal static class HostingExtensions
                     opts.SetDbStatementForText = true;
                 })
                 .AddOtlpExporter();
-        });
-
-        // Metrics
-        builder.Services.AddOpenTelemetryMetrics(options =>
-        {
-            options
-                .SetResourceBuilder(_otelResource)
-                // Collect metrics from the AuthUtils project
-                .AddMeter("AuthUtils")
-                // Collect metrics from ASP.NET and HTTP Client calls
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation()
-                .AddOtlpExporter((OtlpExporterOptions exporterOptions, MetricReaderOptions readerOptions) =>
-                {
-                    readerOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 5000;
-                    readerOptions.TemporalityPreference = MetricReaderTemporalityPreference.Delta;
-                });
-        });
-
-        // Logs
-        builder.Logging.ClearProviders();
+            })
+            .WithMetrics(options =>
+            {
+                options
+                    .SetResourceBuilder(_otelResource)
+                    // Collect metrics from the AuthUtils project
+                    .AddMeter("AuthUtils")
+                    // Collect metrics from ASP.NET and HTTP Client calls
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddOtlpExporter((OtlpExporterOptions exporterOptions, MetricReaderOptions readerOptions) =>
+                    {
+                        readerOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 5000;
+                        readerOptions.TemporalityPreference = MetricReaderTemporalityPreference.Delta;
+                    });
+            });
 
         builder.Logging.AddOpenTelemetry(options =>
         {
