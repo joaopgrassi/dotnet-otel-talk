@@ -15,7 +15,7 @@ exporters:
       Authorization: "<your-observability-back-end-authorization"
       
   logging:
-    loglevel: debug
+    verbosity: detailed
 
 service:
   pipelines:

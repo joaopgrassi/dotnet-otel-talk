@@ -24,7 +24,7 @@ services:
       - dotnet-otel-demo
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.61.0
+    image: otel/opentelemetry-collector-contrib:0.77.0
     command: ["--config=/etc/otel-collector-config.yaml", "${OTELCOL_ARGS}"]
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
